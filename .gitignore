@@ -8,6 +8,10 @@ node_modules/
 dist/
 web-build/
 
+# Android build (gerado pelo Expo — não versionar)
+android/
+ios/
+
 # Native
 *.orig.*
 *.jks
@@ -29,6 +33,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
