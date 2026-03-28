@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import * as Animatable from "react-native-animatable";
 import { useNavigation } from "@react-navigation/native";
@@ -48,14 +49,11 @@ export default function ControleAcesso({ route }) {
       const { data: usuarioData, error: usuarioError } = await axios.get(
         `${API_URL}/usuario/${deviceId}`
       );
-
       if (usuarioError) {
         console.error("Erro ao buscar usuário logado:", usuarioError);
         return;
       }
-
       setUsuarioLogado(usuarioData);
-      console.log("Usuario Logado:", usuarioData);
     } catch (error) {
       console.error("Erro ao buscar usuário logado:", error.message);
     }
@@ -67,23 +65,19 @@ export default function ControleAcesso({ route }) {
       const { data: acessosData, error: acessosError } = await axios.get(
         `${API_URL}/acesso/ambiente/${ambienteId}`
       );
-
       if (acessosError) {
         console.error("Erro ao buscar solicitações:", acessosError);
         return;
       }
-
       const solicitacoesComNomes = await Promise.all(
         acessosData.map(async (solicitacao) => {
           const { data: usuarioData, error: usuarioError } = await axios.get(
             `${API_URL}/usuario/${solicitacao.usuarioId}`
           );
-
           if (usuarioError) {
             console.error("Erro ao buscar nome do usuário:", usuarioError);
             return solicitacao;
           }
-
           return {
             ...solicitacao,
             nomeUsuario: usuarioData.nomeCompleto || "Usuário desconhecido",
@@ -92,13 +86,11 @@ export default function ControleAcesso({ route }) {
       );
 
       let filteredSolicitacoes = solicitacoesComNomes;
-
       if (!usuarioLogado.superUser) {
         filteredSolicitacoes = solicitacoesComNomes.filter(
           (solicitacao) => solicitacao.tipoUsuario !== "Coordenador"
         );
       }
-
       setSolicitacoes(filteredSolicitacoes);
     } catch (error) {
       console.error("Erro ao buscar solicitações:", error.message);
@@ -112,14 +104,11 @@ export default function ControleAcesso({ route }) {
       const { data: ambienteData, error: ambienteError } = await axios.get(
         `${API_URL}/ambiente/onlyOne/${ambienteId}`
       );
-
       if (ambienteError) {
         console.error("Erro ao buscar nome do ambiente:", ambienteError);
         return;
       }
-
       setNomeAmbiente(ambienteData.nome);
-      console.log("Nome do Ambiente:", ambienteData.nome);
     } catch (error) {
       console.error("Erro ao buscar nome do ambiente:", error.message);
     }
@@ -130,12 +119,10 @@ export default function ControleAcesso({ route }) {
       const { data: perfisData, error: perfisError } = await axios.get(
         `${API_URL}/perfil`
       );
-
       if (perfisError) {
         console.error("Erro ao buscar perfis:", perfisError);
         return;
       }
-
       const filteredPerfis = perfisData.filter(
         (perfil) => perfil.nome !== "Coordenador"
       );
@@ -145,24 +132,6 @@ export default function ControleAcesso({ route }) {
     }
   };
 
-  // const fetchPerfis = async () => {
-  //     try {
-  //         const { data: perfisData, error: perfisError } = await supabase
-  //             .from('tipoPerfil')
-  //             .select('id, nome');
-
-  //         if (perfisError) {
-  //             console.error('Erro ao buscar perfis:', perfisError);
-  //             return;
-  //         }
-
-  //         const filteredPerfis = perfisData.filter(perfil => perfil.nome !== 'Coordenador');
-  //         setAvailablePerfis(filteredPerfis);
-  //     } catch (error) {
-  //         console.error('Erro ao buscar perfis:', error.message);
-  //     }
-  // };
-
   const handleEditPerfil = (solicitacao) => {
     setSolicitacaoToEdit(solicitacao);
     fetchPerfis();
@@ -170,38 +139,26 @@ export default function ControleAcesso({ route }) {
   };
 
   const handleDelete = async (solicitacaoId) => {
-    console.log("SolicitacaoId:", solicitacaoId);
     Alert.alert(
       "Excluir Solicitação",
       "Tem certeza que deseja excluir esta solicitação?",
       [
+        { text: "Cancelar", style: "cancel" },
         {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "OK",
+          text: "Excluir",
+          style: "destructive",
           onPress: async () => {
             try {
               const { data, error } = await axios.delete(
                 `${API_URL}/acesso/${solicitacaoId}`
               );
-
               if (error) {
-                console.error(
-                  "Erro ao deletar acesso do usuário:",
-                  error.message
-                );
                 Alert.alert("Erro", "Erro ao deletar a solicitação.");
                 return;
               }
-
               fetchSolicitacoes();
             } catch (error) {
-              console.error(
-                "Erro ao deletar acesso do usuário:",
-                error.message
-              );
+              console.error("Erro ao deletar acesso:", error.message);
             }
           },
         },
@@ -226,8 +183,6 @@ export default function ControleAcesso({ route }) {
   };
 
   const handleConfirmEditPerfil = async () => {
-    console.log("SolicitacaoToEdit:", solicitacaoToEdit.id);
-
     if (selectedPerfil) {
       try {
         const { data, error } = await axios.put(
@@ -237,13 +192,10 @@ export default function ControleAcesso({ route }) {
             ativo: solicitacaoToEdit.ativo,
           }
         );
-
         if (error) {
-          console.error("Erro ao atualizar perfil:", error);
           Alert.alert("Erro", "Erro ao atualizar o perfil.");
           return;
         }
-
         fetchSolicitacoes();
         setModalVisible(false);
         setSelectedPerfil(null);
@@ -256,32 +208,6 @@ export default function ControleAcesso({ route }) {
     }
   };
 
-  // const handleConfirmEditPerfil = async () => {
-  //     if (selectedPerfil) {
-  //         try {
-  //             const { error } = await supabase
-  //                 .from('acessos')
-  //                 .update({ tipoUsuario: selectedPerfil.nome })
-  //                 .eq('id', solicitacaoToEdit.id);
-
-  //             if (error) {
-  //                 console.error('Erro ao atualizar perfil:', error);
-  //                 Alert.alert('Erro', 'Erro ao atualizar o perfil.');
-  //                 return;
-  //             }
-
-  //             fetchSolicitacoes();
-  //             setModalVisible(false);
-  //             setSelectedPerfil(null);
-  //             setSolicitacaoToEdit(null);
-  //         } catch (error) {
-  //             console.error('Erro ao atualizar perfil:', error.message);
-  //         }
-  //     } else {
-  //         Alert.alert('Erro', 'Por favor, selecione um perfil.');
-  //     }
-  // };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.containerHeader}>
@@ -290,14 +216,13 @@ export default function ControleAcesso({ route }) {
         </Animatable.View>
         <Animatable.View animation="fadeInDown" delay={500}>
           <View style={{ flexDirection: "row", justifyContent: "center" }}>
-            <View style={[styles.divider]} />
+            <View style={styles.divider} />
             <Text style={styles.text}>{nomeAmbiente}</Text>
           </View>
         </Animatable.View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Animatable.View animation="fadeInUp" style={styles.containerForm}>
-          {/* Barra de navegação */}
           <View style={styles.navBar}>
             <TouchableOpacity
               style={[styles.navButton, styles.activeButton]}
@@ -316,64 +241,85 @@ export default function ControleAcesso({ route }) {
               <Text style={styles.navText}>Crachá</Text>
             </TouchableOpacity>
           </View>
+
           {loading ? (
-            <Text>Carregando...</Text>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#a31821" />
+              <Text style={styles.loadingText}>Carregando...</Text>
+            </View>
+          ) : solicitacoes.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Nenhuma solicitação encontrada.</Text>
+            </View>
           ) : (
             solicitacoes.map((solicitacao) => (
               <View
                 style={styles.solicitacaoContainer}
                 key={solicitacao.usuarioId}
               >
-                <View style={{ flexDirection: "column" }}>
-                  <Text style={styles.solicitacaoText}>
+                <View style={styles.cardLeft}>
+                  <Text style={styles.nomeUsuario}>
                     {solicitacao.nomeUsuario}
                   </Text>
-                  <Text style={styles.solicitacaoText}>
-                    Perfil: {solicitacao.tipoUsuario}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => handleEditPerfil(solicitacao)}
-                  >
-                    <Text
-                      style={[styles.solicitacaoText, { color: "#a31821" }]}
-                    >
-                      Editar Perfil!
+                  <View style={styles.perfilBadge}>
+                    <Text style={styles.perfilBadgeText}>
+                      {solicitacao.tipoUsuario}
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(solicitacao.id)}
-                  >
-                    <Text
-                      style={[styles.solicitacaoText, { color: "#a31821" }]}
-                    >
-                      Excluir solicitação!
+                  </View>
+                  <View style={styles.statusRow}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: solicitacao.ativo ? "#2ecc71" : "#e74c3c" },
+                      ]}
+                    />
+                    <Text style={styles.statusText}>
+                      {solicitacao.ativo ? "Ativo" : "Inativo"}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.btnEditar}
+                      onPress={() => handleEditPerfil(solicitacao)}
+                    >
+                      <Text style={styles.btnEditarText}>Editar Perfil</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.btnExcluir}
+                      onPress={() => handleDelete(solicitacao.id)}
+                    >
+                      <Text style={styles.btnExcluirText}>Excluir</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <Switch
                   value={solicitacao.ativo}
                   onValueChange={(newValue) =>
                     handleToggleActivation(solicitacao.id, newValue)
                   }
-                  trackColor={{ false: "#cdcdcd", true: "#a31821" }}
-                  thumbColor={solicitacao.ativado ? "#fff" : "#fff"}
+                  trackColor={{ false: "#ddd", true: "#f5c6cb" }}
+                  thumbColor={solicitacao.ativo ? "#a31821" : "#ccc"}
                 />
               </View>
             ))
           )}
         </Animatable.View>
       </ScrollView>
+
       <Modal
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => {
-          setModalVisible(!modalVisible);
-        }}
+        onRequestClose={() => setModalVisible(!modalVisible)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalView}>
-            <Text style={styles.modalText}>Selecione um perfil:</Text>
+            <Text style={styles.modalTitle}>Selecione um perfil</Text>
+            {solicitacaoToEdit && (
+              <Text style={styles.modalSubtitle}>
+                {solicitacaoToEdit.nomeUsuario}
+              </Text>
+            )}
             <FlatList
               data={availablePerfis}
               keyExtractor={(item) => item.id.toString()}
@@ -387,22 +333,31 @@ export default function ControleAcesso({ route }) {
                   ]}
                   onPress={() => setSelectedPerfil(item)}
                 >
-                  <Text style={styles.perfilText}>{item.nome}</Text>
+                  <Text
+                    style={[
+                      styles.perfilText,
+                      selectedPerfil && selectedPerfil.id === item.id
+                        ? styles.selectedPerfilText
+                        : null,
+                    ]}
+                  >
+                    {item.nome}
+                  </Text>
                 </TouchableOpacity>
               )}
             />
-            <View style={styles.buttonGroup}>
+            <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.buttonConfirm}
+                style={styles.modalBtnConfirm}
                 onPress={handleConfirmEditPerfil}
               >
-                <Text style={styles.buttonText}>Confirmar</Text>
+                <Text style={styles.modalBtnText}>Confirmar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.buttonCancel}
+                style={styles.modalBtnCancel}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={styles.modalBtnText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -418,7 +373,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#a31821",
   },
   containerHeader: {
-    display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -428,35 +382,115 @@ const styles = StyleSheet.create({
   containerForm: {
     flex: 1,
     backgroundColor: "#FFF",
-    alignItems: "center",
-    borderTopRightRadius: 0,
-    padding: 20,
+    padding: 16,
     minHeight: "100%",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#888",
+    fontFamily: "AnonymousPro_400Regular",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#888",
+    fontFamily: "AnonymousPro_400Regular",
   },
   solicitacaoContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    width: "104%",
+    marginVertical: 6,
+    padding: 14,
+    width: "100%",
     backgroundColor: "#FFF",
-    borderRadius: 10,
-    paddingVertical: 10,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#a31821",
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  solicitacaoText: {
+  cardLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  nomeUsuario: {
+    fontSize: 15,
+    color: "#222",
+    fontFamily: "AnonymousPro_700Bold",
+    marginBottom: 6,
+  },
+  perfilBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 6,
+  },
+  perfilBadgeText: {
+    fontSize: 11,
+    color: "#555",
+    fontFamily: "AnonymousPro_700Bold",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
     fontSize: 12,
-    color: "rgba(0, 0, 0, 0.61)",
+    color: "#666",
     fontFamily: "AnonymousPro_400Regular",
-    marginTop: 3,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  btnEditar: {
+    backgroundColor: "#a31821",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  btnEditarText: {
+    color: "#FFF",
+    fontSize: 11,
+    fontFamily: "AnonymousPro_700Bold",
+  },
+  btnExcluir: {
+    backgroundColor: "#FFF",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  btnExcluirText: {
+    color: "#666",
+    fontSize: 11,
+    fontFamily: "AnonymousPro_700Bold",
   },
   logo1: {
     width: 200,
@@ -465,7 +499,7 @@ const styles = StyleSheet.create({
   divider: {
     borderBottomWidth: 1,
     borderBottomColor: "#FFF",
-    width: "5000%",
+    width: "100%",
     position: "absolute",
   },
   text: {
@@ -473,69 +507,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "AnonymousPro_700Bold",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalView: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: "center",
-    fontSize: 16,
-  },
-  perfilItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    width: 300,
-    backgroundColor: "#f9f9f9",
-  },
-  selectedPerfil: {
-    backgroundColor: "#d1e7dd",
-  },
-  perfilText: {
-    fontSize: 16,
-  },
-  buttonGroup: {
-    flexDirection: "row",
-    marginTop: 20,
-  },
-  buttonConfirm: {
-    backgroundColor: "#28a745",
-    padding: 10,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  buttonCancel: {
-    backgroundColor: "#dc3545",
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 16,
-  },
   navBar: {
     flexDirection: "row",
     backgroundColor: "#FFF",
-    // borderTopWidth: 1,
-    // borderTopColor: "#ddd",
+    marginBottom: 12,
   },
   navButton: {
     flex: 1,
@@ -551,9 +526,82 @@ const styles = StyleSheet.create({
   navText: {
     fontFamily: "AnonymousPro_700Bold",
     fontSize: 16,
-    color: "#000",
+    color: "#999",
   },
   activeText: {
     color: "#a31821",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalView: {
+    width: "85%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "AnonymousPro_700Bold",
+    color: "#222",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    fontFamily: "AnonymousPro_400Regular",
+    color: "#888",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  perfilItem: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#f9f9f9",
+    marginBottom: 6,
+  },
+  selectedPerfil: {
+    backgroundColor: "#a31821",
+  },
+  perfilText: {
+    fontSize: 15,
+    fontFamily: "AnonymousPro_400Regular",
+    color: "#333",
+  },
+  selectedPerfilText: {
+    color: "#FFF",
+    fontFamily: "AnonymousPro_700Bold",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    marginTop: 20,
+    gap: 10,
+  },
+  modalBtnConfirm: {
+    flex: 1,
+    backgroundColor: "#a31821",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalBtnCancel: {
+    flex: 1,
+    backgroundColor: "#888",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalBtnText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontFamily: "AnonymousPro_700Bold",
   },
 });
