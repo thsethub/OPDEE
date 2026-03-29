@@ -32,7 +32,7 @@ export default function Routes({ route }) {
   const [isDeviceIdExists, setIsDeviceIdExists] = useState(success);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState(null);
-  const [nome, setNomeCompleto] = useState(null);
+  const [nomeCompleto, setNomeCompleto] = useState(null);
 
   useEffect(() => {
     const getDeviceId = async () => {
@@ -103,7 +103,7 @@ export default function Routes({ route }) {
               name="Welcome"
               component={Welcome}
               options={{ headerShown: false }}
-              initialParams={isDeviceIdExists ? { nome: nome } : {}}
+              initialParams={isDeviceIdExists ? { nome: nomeCompleto } : {}}
             />
           ) : (
             <Stack.Screen

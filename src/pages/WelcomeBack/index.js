@@ -30,7 +30,7 @@ export default function WelcomeBack() {
               textAlign: "center",
             }}
           >
-            v.241124
+            v.290326
           </Text>
         </Animatable.View>
       </View>

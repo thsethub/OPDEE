@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   Alert,
   Image,
-  TextInput,
 } from "react-native";
 import CustomPicker from "../../../AppConfig/telas/rfid/customPicker";
 import { contextDeviceId } from "../../../../../context/contextGlobal/contex";
@@ -16,22 +15,72 @@ import * as Animatable from "react-native-animatable";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { Client as PahoClient } from "paho-mqtt";
-import { API_URL } from "@env";
+import { API_URL, API_URL2 } from "@env";
+
+const PAGE_SIZE = 20;
 
 export default function NovoAmbiente() {
   const navigation = useNavigation();
   const deviceId = useContext(contextDeviceId);
-  const [data, setData] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [broker, setBroker] = useState(null);
   const [client, setClient] = useState(null);
   const [connected, setConnected] = useState(false);
   const [rfid, setRFID] = useState("");
 
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const searchTimeout = useRef(null);
+  const currentFilter = useRef("");
+
+  useEffect(() => {
+    loadUsuarios(0, true, "");
+  }, []);
+
+  const loadUsuarios = async (p, reset = false, nome = "") => {
+    if (p > 0) {
+      if (loadingMoreRef.current) return;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+    }
+    try {
+      const { data } = await axios.get(`${API_URL2}/usuarios`, {
+        params: { nome, page: p, size: PAGE_SIZE },
+      });
+      const novos = Array.isArray(data) ? data : (data?.content ?? []);
+      const last = Array.isArray(data) ? true : (data?.last ?? true);
+      setUsuarios((prev) => (reset ? novos : [...prev, ...novos]));
+      setPage(p);
+      setHasMore(!last);
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error.message);
+    } finally {
+      setLoadingMore(false);
+      loadingMoreRef.current = false;
+    }
+  };
+
+  const handleSearch = useCallback((texto) => {
+    currentFilter.current = texto;
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      loadUsuarios(0, true, texto.trim());
+    }, 400);
+  }, []);
+
+  const handleLoadMore = () => {
+    if (hasMore && !loadingMoreRef.current) {
+      loadUsuarios(page + 1, false, currentFilter.current.trim());
+    }
+  };
+
   useEffect(() => {
     const fetchBrokerData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/broker`); // URL da sua API
+        const response = await axios.get(`${API_URL}/broker`);
         const brokerData = response.data[0];
         console.log("Dados do Broker:", brokerData);
         setBroker(brokerData);
@@ -39,7 +88,6 @@ export default function NovoAmbiente() {
         console.error("Erro ao buscar configuração do broker: ", error);
       }
     };
-
     fetchBrokerData();
   }, []);
 
@@ -52,8 +100,9 @@ export default function NovoAmbiente() {
       );
 
       mqttClient.onMessageArrived = (message) => {
-        console.log("Mensagem recebida:", message.payloa);
-        setRFID(message.Cartao);
+        console.log("Mensagem recebida:", message.payloadString);
+        const payload = JSON.parse(message.payloadString);
+        setRFID(payload.Cartao);
       };
 
       mqttClient.onConnectionLost = (responseObject) => {
@@ -81,28 +130,12 @@ export default function NovoAmbiente() {
     }
   }, [broker]);
 
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(`http://150.161.61.1:3000/usuarios`);
-      const data = response.data;
-      setData(data);
-      console.log(data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const associarUsuario = async () => {
     if (selectedUser && rfid) {
       try {
-        const response = await axios.put(
-          `http://150.161.61.1:3000/usuarios/${selectedUser.CPF}`,
-          { UniqueID: rfid }
-        );
+        await axios.put(`${API_URL2}/usuarios/${selectedUser.id}`, {
+          UniqueID: Number(rfid),
+        });
         Alert.alert(
           "Sucesso",
           `Usuário ${selectedUser.Nome} associado ao código RFID ${rfid}`,
@@ -112,8 +145,8 @@ export default function NovoAmbiente() {
               onPress: () => {
                 setSelectedUser(null);
                 setRFID("");
-              }
-            }
+              },
+            },
           ]
         );
       } catch (error) {
@@ -121,10 +154,7 @@ export default function NovoAmbiente() {
         Alert.alert("Erro", "Falha ao associar usuário.");
       }
     } else {
-      Alert.alert(
-        "Erro",
-        "Por favor, selecione um usuário e receba um código RFID."
-      );
+      Alert.alert("Erro", "Por favor, selecione um usuário e receba um código RFID.");
     }
   };
 
@@ -134,21 +164,12 @@ export default function NovoAmbiente() {
         "Confirmação",
         `Tem certeza que deseja associar o usuário ${selectedUser.Nome} ao código RFID ${rfid}?`,
         [
-          {
-            text: "Cancelar",
-            style: "cancel",
-          },
-          {
-            text: "Confirmar",
-            onPress: associarUsuario,
-          },
+          { text: "Cancelar", style: "cancel" },
+          { text: "Confirmar", onPress: associarUsuario },
         ]
       );
     } else {
-      Alert.alert(
-        "Erro",
-        "Por favor, selecione um usuário e receba um código RFID."
-      );
+      Alert.alert("Erro", "Por favor, selecione um usuário e receba um código RFID.");
     }
   };
 
@@ -169,8 +190,12 @@ export default function NovoAmbiente() {
           <CustomPicker
             selectedValue={selectedUser}
             onValueChange={(value) => setSelectedUser(value)}
-            items={data}
+            items={usuarios}
             style={styles.input}
+            placeholder="Selecione um usuário"
+            onSearch={handleSearch}
+            onLoadMore={handleLoadMore}
+            loadingMore={loadingMore}
           />
           <Text style={styles.title}>Código RFID</Text>
           <View style={styles.input}>
@@ -233,17 +258,13 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.5,
     shadowRadius: 4,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
   button: {
     backgroundColor: "#a31821",
     width: 334,
     height: 54,
-    marginTop: 15,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 50,
@@ -255,10 +276,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.5,
     shadowRadius: 4,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
   buttonText: {

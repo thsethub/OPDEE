@@ -214,34 +214,31 @@ export default function ControleAcesso({ route }) {
         <Animatable.View animation="fadeInDown" delay={500}>
           <Image style={styles.logo1} source={require("../imgs/icon.jpeg")} />
         </Animatable.View>
-        <Animatable.View animation="fadeInDown" delay={500}>
-          <View style={{ flexDirection: "row", justifyContent: "center" }}>
+        <Animatable.View animation="fadeInDown" delay={500} style={styles.headerTitleAnimated}>
+          <View style={styles.headerTitleContainer}>
             <View style={styles.divider} />
             <Text style={styles.text}>{nomeAmbiente}</Text>
           </View>
         </Animatable.View>
       </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <Animatable.View animation="fadeInUp" style={styles.containerForm}>
-          <View style={styles.navBar}>
-            <TouchableOpacity
-              style={[styles.navButton, styles.activeButton]}
-              onPress={() =>
-                navigation.navigate("ControleAcesso", { ambienteId })
-              }
-            >
-              <Text style={[styles.navText, styles.activeText]}>Aplicativo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() =>
-                navigation.navigate("solicitacoesTranca", { ambienteId })
-              }
-            >
-              <Text style={styles.navText}>Crachá</Text>
-            </TouchableOpacity>
-          </View>
 
+      <View style={styles.navBar}>
+        <TouchableOpacity
+          style={[styles.navButton, styles.activeButton]}
+          onPress={() => navigation.navigate("ControleAcesso", { ambienteId })}
+        >
+          <Text style={[styles.navText, styles.activeText]}>Aplicativo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => navigation.navigate("solicitacoesTranca", { ambienteId })}
+        >
+          <Text style={styles.navText}>Crachá</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <View style={styles.content}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#a31821" />
@@ -303,7 +300,7 @@ export default function ControleAcesso({ route }) {
               </View>
             ))
           )}
-        </Animatable.View>
+        </View>
       </ScrollView>
 
       <Modal
@@ -376,10 +373,59 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  headerTitleAnimated: {
+    width: "100%",
+  },
+  headerTitleContainer: {
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 2,
+  },
+  divider: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#FFF",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+  },
+  logo1: {
+    width: 200,
+    height: 200,
+  },
+  text: {
+    color: "white",
+    fontSize: 18,
+    fontFamily: "AnonymousPro_700Bold",
+  },
+  navBar: {
+    flexDirection: "row",
+    backgroundColor: "#FFF",
+  },
+  navButton: {
+    flex: 1,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: 3,
+    borderBottomColor: "transparent",
+  },
+  activeButton: {
+    borderBottomColor: "#a31821",
+  },
+  navText: {
+    fontFamily: "AnonymousPro_700Bold",
+    fontSize: 16,
+    color: "#999",
+  },
+  activeText: {
+    color: "#a31821",
+  },
   scrollViewContent: {
     flexGrow: 1,
   },
-  containerForm: {
+  content: {
     flex: 1,
     backgroundColor: "#FFF",
     padding: 16,
@@ -491,45 +537,6 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 11,
     fontFamily: "AnonymousPro_700Bold",
-  },
-  logo1: {
-    width: 200,
-    height: 200,
-  },
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#FFF",
-    width: "100%",
-    position: "absolute",
-  },
-  text: {
-    color: "white",
-    fontSize: 18,
-    fontFamily: "AnonymousPro_700Bold",
-  },
-  navBar: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    marginBottom: 12,
-  },
-  navButton: {
-    flex: 1,
-    height: 50,
-    justifyContent: "center",
-    alignItems: "center",
-    borderBottomWidth: 3,
-    borderBottomColor: "transparent",
-  },
-  activeButton: {
-    borderBottomColor: "#a31821",
-  },
-  navText: {
-    fontFamily: "AnonymousPro_700Bold",
-    fontSize: 16,
-    color: "#999",
-  },
-  activeText: {
-    color: "#a31821",
   },
   modalOverlay: {
     flex: 1,

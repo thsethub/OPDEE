@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Modal,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 
@@ -17,6 +18,9 @@ const CustomPicker = ({
   onValueChange,
   style,
   placeholder,
+  onSearch,
+  onLoadMore,
+  loadingMore,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [filter, setFilter] = useState("");
@@ -24,17 +28,27 @@ const CustomPicker = ({
   const handleSelect = (value) => {
     onValueChange(value);
     setModalVisible(false);
+    setFilter("");
+    if (onSearch) onSearch("");
   };
 
-  const filteredItems = items.filter(
-    (item) =>
-      (item.Nome &&
-        typeof item.Nome === "string" &&
-        item.Nome.toLowerCase().includes(filter.toLowerCase())) ||
-      (item.CPF &&
-        typeof item.CPF === "number" &&
-        item.CPF.toString().includes(filter)),
-  );
+  const handleFilterChange = (text) => {
+    setFilter(text);
+    if (onSearch) {
+      onSearch(text);
+    }
+  };
+
+  const displayItems = onSearch
+    ? items
+    : items.filter(
+        (item) =>
+          (item.Nome &&
+            typeof item.Nome === "string" &&
+            item.Nome.toLowerCase().includes(filter.toLowerCase())) ||
+          (item.CPF &&
+            item.CPF.toString().includes(filter)),
+      );
 
   return (
     <View style={style}>
@@ -73,46 +87,47 @@ const CustomPicker = ({
       >
         <TouchableOpacity
           style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setModalVisible(false)}
         >
           <View style={styles.modalContainer}>
             <TextInput
               style={styles.input}
               placeholder="Filtrar por Nome ou CPF"
+              placeholderTextColor="#999"
               value={filter}
-              onChangeText={setFilter}
+              onChangeText={handleFilterChange}
+              autoCorrect={false}
             />
             <FlatList
-              data={filteredItems}
-              keyExtractor={(item) => item.CPF.toString()}
+              data={displayItems}
+              keyExtractor={(item, index) => (item?.CPF ?? index).toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.button}
                   onPress={() => handleSelect(item)}
                 >
-                  <View
-                    style={{
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#a31821",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: "AnonymousPro_400Regular",
-                      }}
-                    >
+                  <View style={styles.itemDivider}>
+                    <Text style={{ fontFamily: "AnonymousPro_400Regular" }}>
                       {item.Nome}
                     </Text>
-                    <Text
-                      style={{
-                        fontFamily: "AnonymousPro_400Regular",
-                      }}
-                    >
+                    <Text style={{ fontFamily: "AnonymousPro_400Regular", color: "#888", fontSize: 12 }}>
                       {item.CPF}
                     </Text>
                   </View>
                 </TouchableOpacity>
               )}
+              onEndReached={onLoadMore}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                loadingMore ? (
+                  <ActivityIndicator size="small" color="#a31821" style={{ paddingVertical: 8 }} />
+                ) : null
+              }
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Nenhum usuário encontrado.</Text>
+              }
+              keyboardShouldPersistTaps="handled"
             />
           </View>
         </TouchableOpacity>
@@ -125,10 +140,14 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: "#FFF",
     width: "100%",
-    height: 54,
-    marginTop: 15,
+    minHeight: 54,
     justifyContent: "center",
     paddingLeft: 10,
+  },
+  itemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    paddingVertical: 6,
   },
   modalOverlay: {
     flex: 1,
@@ -150,6 +169,13 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 10,
     paddingLeft: 10,
+    fontFamily: "AnonymousPro_400Regular",
+  },
+  emptyText: {
+    textAlign: "center",
+    paddingVertical: 20,
+    color: "#888",
+    fontFamily: "AnonymousPro_400Regular",
   },
 });
 
